@@ -5,11 +5,12 @@ import './App.css';
 
 function App() {
   const [user, setUser] = useState({});
+  const [recipientEmail, setRecipientEmail] = useState('');
+  const [message, setMessage] = useState('');
+  const [sentMessages, setSentMessages] = useState([]);
 
   function handleGoogleLogin(response) {
-    console.log('Encoded JWT ID token: ' + response.credential);
     const userObject = jwt_decode(response.credential);
-    console.log(userObject);
     setUser(userObject);
   }
 
@@ -17,10 +18,43 @@ function App() {
     setUser({});
   }
 
+  function sendMessage() {
+    if (!recipientEmail || !message) {
+      alert('Recipient and message are required fields.');
+      return;
+    }
+
+    // Send the message to the server
+    fetch('http://localhost:5000/send-message', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        sender: user.email,
+        recipient: recipientEmail,
+        message: message,
+      }),
+    })
+      .then((response) => response.json())
+      .then((data) => {
+        if (data.message === 'Message sent successfully') {
+          // Update the sent messages
+          setSentMessages([...sentMessages, { sender: user.email, recipient: recipientEmail, message }]);
+          setMessage('');
+        } else {
+          alert('Failed to send message. Please try again.');
+        }
+      })
+      .catch((error) => {
+        console.error('Error while sending the message:', error);
+      });
+  }
+
   useEffect(() => {
     /* global google */
     google.accounts.id.initialize({
-      client_id: "850002868075-riog8tkerkj6rm9p4981v1c208i7fi64.apps.googleusercontent.com", // Replace with your actual client ID
+      client_id: "850002868075-riog8tkerkj6rm9p4981v1c208i7fi64.apps.googleusercontent.com",
       callback: handleGoogleLogin,
     });
 
@@ -41,6 +75,36 @@ function App() {
           <img src={user.picture} alt="User" />
           <h3>{user.name}</h3>
           <p>{user.email}</p>
+        </div>
+      )}
+
+      <div>
+        <h2>Send a Message</h2>
+        <input
+          type="text"
+          placeholder="Recipient Email"
+          value={recipientEmail}
+          onChange={(e) => setRecipientEmail(e.target.value)}
+        />
+        <textarea
+          placeholder="Message"
+          value={message}
+          onChange={(e) => setMessage(e.target.value)}
+        ></textarea>
+        <button onClick={sendMessage}>Send</button>
+      </div>
+
+      {sentMessages.length > 0 && (
+        <div>
+          <h2>Sent Messages</h2>
+          <ul>
+            {sentMessages.map((sentMessage, index) => (
+              <li key={index}>
+                <strong>Recipient: {sentMessage.recipient}</strong>
+                <p>{sentMessage.message}</p>
+              </li>
+            ))}
+          </ul>
         </div>
       )}
     </div>
