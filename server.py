@@ -77,6 +77,12 @@ def get_messages(sender, recipient):
                          message['sender'] == sender and message['recipient'] == recipient]
     return jsonify({'messages': filtered_messages})
 
+@app.route('/get-inbox/<recipient_email>', methods=['GET'])
+def get_inbox(recipient_email):
+    # Filter messages based on the recipient's email
+    inbox_messages = [message for message in messages if message['recipient'] == recipient_email]
+    return jsonify({'inbox': inbox_messages})
+    
 def analyze_sentiment(text):
     blob = TextBlob(text)
     sentiment = blob.sentiment

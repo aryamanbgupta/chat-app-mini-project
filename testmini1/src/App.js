@@ -8,6 +8,7 @@ function App() {
   const [recipientEmail, setRecipientEmail] = useState('');
   const [message, setMessage] = useState('');
   const [sentMessages, setSentMessages] = useState([]);
+  const [inboxMessages, setInboxMessages] = useState([]);
 
   function handleGoogleLogin(response) {
     const userObject = jwt_decode(response.credential);
@@ -66,6 +67,20 @@ function App() {
     google.accounts.id.prompt();
   }, []);
 
+  useEffect(() => {
+    // Fetch inbox messages when the user logs in
+    if (user.email) {
+      fetch(`http://localhost:5000/get-inbox/${user.email}`)
+        .then((response) => response.json())
+        .then((data) => {
+          setInboxMessages(data.inbox);
+        })
+        .catch((error) => {
+          console.error('Error fetching inbox messages:', error);
+        });
+    }
+  }, [user.email]);
+
   return (
     <div className="App">
       <div id="signInDiv"></div>
@@ -93,6 +108,20 @@ function App() {
         ></textarea>
         <button onClick={sendMessage}>Send</button>
       </div>
+      
+      {inboxMessages.length > 0 && (
+        <div>
+          <h2>Inbox</h2>
+          <ul>
+            {inboxMessages.map((inboxMessage, index) => (
+              <li key={index}>
+                <strong>Sender: {inboxMessage.sender}</strong>
+                <p>{inboxMessage.message}</p>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {sentMessages.length > 0 && (
         <div>
