@@ -1,11 +1,50 @@
 from flask import Flask, request, jsonify
 from textblob import TextBlob
+from google.oauth2 import id_token
+from google.auth.transport import requests
+from flask_cors import CORS  # Add CORS for cross-origin requests
+import os
 
 app = Flask(__name__)
+CORS(app)  # Enable CORS for cross-origin requests
+
 
 # Dummy storage for user accounts and messages (replace with a database in a real application)
-users = {'alice@example.com': 'Alice', 'bob@example.com': 'Bob'}
+users = {}
 messages = []
+
+CLIENT_ID = '850002868075-riog8tkerkj6rm9p4981v1c208i7fi64.apps.googleusercontent.com'  
+
+@app.route('/login-with-google', methods=['POST'])
+def login_with_google():
+    data = request.get_json()
+
+    # Extract the Google ID token from the request
+    google_id_token = data['google_id_token']
+
+    # Verify the Google ID token
+    user_info = verify_google_id_token(google_id_token)
+
+    if user_info:
+        email = user_info['email']
+        user_name = user_info['name']
+
+        # Store or retrieve user information in your application's storage (e.g., database)
+        users[email] = user_name
+
+        return jsonify({'message': 'Google login successful', 'user_name': user_name})
+    else:
+        return jsonify({'message': 'Google login failed'})
+
+def verify_google_id_token(id_token):
+    try:
+        id_info = id_token.verify_oauth2_token(id_token, requests.Request(), CLIENT_ID)
+        return {
+            'email': id_info['email'],
+            'name': id_info['name']
+        }
+    except Exception as e:
+        return None
 
 @app.route('/send-message', methods=['POST'])
 def send_message():
