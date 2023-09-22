@@ -19,7 +19,7 @@ function App() {
   function handleGoogleLogout() {
     setUser({});
   }
-
+  /*
   function sendMessage() {
     if (!recipientEmail || !message) {
       alert('Recipient and message are required fields.');
@@ -52,7 +52,7 @@ function App() {
         console.error('Error while sending the message:', error);
       });
   }
-
+  */
   useEffect(() => {
     /* global google */
     google.accounts.id.initialize({
@@ -97,6 +97,54 @@ function App() {
     }
   }, [recipientEmail]);
 
+  function sendMessage() {
+    if (!recipientEmail || !message) {
+      alert('Recipient and message are required fields.');
+      return;
+    }
+
+    // Send the message to the server
+    fetch('http://localhost:5000/send-message', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        sender: user.email,
+        recipient: recipientEmail,
+        message: message,
+      }),
+    })
+      .then((response) => response.json())
+      .then((data) => {
+        if (data.message === 'Message sent successfully') {
+          // Update the sent messages
+          setSentMessages([...sentMessages, { sender: user.email, recipient: recipientEmail, message }]);
+          setMessage('');
+
+          // Update the inbox messages (grouped by recipients)
+          setInboxMessages((prevInboxMessages) => {
+            const updatedInbox = { ...prevInboxMessages };
+        
+            // Initialize an empty array for the recipient if it doesn't exist
+            if (!updatedInbox[recipientEmail]) {
+              updatedInbox[recipientEmail] = [];
+            }
+            
+            // Add the new message to the recipient's inbox
+            updatedInbox[recipientEmail].push({ sender: user.email, recipient: recipientEmail, message });
+        
+            return updatedInbox;
+          });
+        } else {
+          alert('Failed to send message. Please try again.');
+        }
+      })
+      .catch((error) => {
+        console.error('Error while sending the message:', error);
+      });
+  }
+
   return (
     <div className="App">
       <div id="signInDiv"></div>
@@ -137,19 +185,37 @@ function App() {
         <button onClick={sendMessage}>Send</button>
       </div>
 
-      {inboxMessages.length > 0 && (
-        <div>
-          <h2>Inbox</h2>
-          <ul>
-            {inboxMessages.map((inboxMessage, index) => (
-              <li key={index}>
-                <strong>Sender: {inboxMessage.sender}</strong>
-                <p>{inboxMessage.message}</p>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+      {Object.keys(inboxMessages).length > 0 && (
+      <div>
+        <h2>Inbox</h2>
+        {Object.keys(inboxMessages).map((recipientEmail) => {
+          const recipientMessages = inboxMessages[recipientEmail];
+          if (recipientMessages.length > 0) {
+            return (
+              <div key={recipientEmail}>
+                <h3>Recipient: {recipientEmail}</h3>
+                <ul>
+                  {recipientMessages.map((inboxMessage, index) => (
+                    <li key={index}>
+                      <strong>Sender: {inboxMessage.sender}</strong>
+                      <p>{inboxMessage.message}</p>
+                      {inboxMessage.sentiment && ( // Add a check for sentiment
+                        <p>
+                          Sentiment: Polarity - {inboxMessage.sentiment.polarity}, Subjectivity -{' '}
+                          {inboxMessage.sentiment.subjectivity}
+                        </p>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            );
+          }
+          return null; // Skip recipients with no messages
+        })}
+      </div>
+    )}
+
     </div>
   );
 }
