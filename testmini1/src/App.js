@@ -9,6 +9,7 @@ function App() {
   const [message, setMessage] = useState('');
   const [sentMessages, setSentMessages] = useState([]);
   const [inboxMessages, setInboxMessages] = useState([]);
+  const [possibleRecipients, setPossibleRecipients] = useState([]);
 
   function handleGoogleLogin(response) {
     const userObject = jwt_decode(response.credential);
@@ -74,12 +75,27 @@ function App() {
         .then((response) => response.json())
         .then((data) => {
           setInboxMessages(data.inbox);
+          console.log(possibleRecipients);
         })
         .catch((error) => {
           console.error('Error fetching inbox messages:', error);
         });
     }
   }, [user.email]);
+
+  useEffect(() => {
+    // Fetch possible recipients as the user types
+    if (recipientEmail) {
+      fetch(`http://localhost:5000/get-recipients/${recipientEmail}`)
+        .then((response) => response.json())
+        .then((data) => {
+          setPossibleRecipients(data.recipients);
+        })
+        .catch((error) => {
+          console.error('Error fetching possible recipients:', error);
+        });
+    }
+  }, [recipientEmail]);
 
   return (
     <div className="App">
@@ -101,6 +117,18 @@ function App() {
           value={recipientEmail}
           onChange={(e) => setRecipientEmail(e.target.value)}
         />
+
+        {/* Display the list of possible recipients */}
+        {possibleRecipients.length > 0 && (
+          <ul>
+            {possibleRecipients.map((recipient, index) => (
+              <li key={index}>
+                <button onClick={() => setRecipientEmail(recipient)}>{recipient}</button>
+              </li>
+            ))}
+          </ul>
+        )}
+
         <textarea
           placeholder="Message"
           value={message}
@@ -108,7 +136,7 @@ function App() {
         ></textarea>
         <button onClick={sendMessage}>Send</button>
       </div>
-      
+
       {inboxMessages.length > 0 && (
         <div>
           <h2>Inbox</h2>
@@ -117,20 +145,6 @@ function App() {
               <li key={index}>
                 <strong>Sender: {inboxMessage.sender}</strong>
                 <p>{inboxMessage.message}</p>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {sentMessages.length > 0 && (
-        <div>
-          <h2>Sent Messages</h2>
-          <ul>
-            {sentMessages.map((sentMessage, index) => (
-              <li key={index}>
-                <strong>Recipient: {sentMessage.recipient}</strong>
-                <p>{sentMessage.message}</p>
               </li>
             ))}
           </ul>
